@@ -9,6 +9,10 @@ var map = new L.Map('map', {
   zoom: 14
 });
 
+L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
+  attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
+}).addTo(map);
+
 var selectLayer = L.geoJson().addTo(map); //add empty geojson layer for selections
 
 //leaflet draw stuff
@@ -68,7 +72,7 @@ map.on('draw:drawstart', function (e) {
 });
 
 //add cartodb named map
-var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/dacf834a-2fa8-11e5-886f-0e4fddd5de28/viz.json';
+var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/a1bdc326-73bb-11e5-927a-0ea31932ec1d/viz.json';
 
 cartodb.createLayer(map, layerUrl)
   .addTo(map)
@@ -82,21 +86,20 @@ cartodb.createLayer(map, layerUrl)
   });
 
 //populate fields list
-$.getJSON('data/fields.json',function(data){
+var url = 'http://cwhong.cartodb.com/api/v2/sql?q=SELECT DISTINCT(agency_name) FROM table_2088960273 ORDER BY agency_name ASC'
 
-  console.log(data.length);
-  data.forEach(function(field) {
-    var listItem = '<li id = "' + field.name + '" class="list-group-item">' 
-      + field.name 
-      + '<span class="glyphicon glyphicon-info-sign icon-right" aria-hidden="true"></span></li>'
+$.getJSON(url,function(data){
+  data.rows.forEach(function(field) {
+    var listItem = '<li id = "' + field.agency_name + '" class="list-group-item">' 
+      + field.agency_name + '</li>'
     
     $('.fieldList').append(listItem);
-    $('#' + field.name).data("description",field.description);
+    //$('#' + field.name).data("description",field.description);
     
   });
 
   //listener for hovers
-  $('.icon-right').hover(showDescription,hideDescription);
+  //$('.icon-right').hover(showDescription,hideDescription);
 
   function showDescription() {
     var o = $(this).offset();
@@ -166,15 +169,18 @@ $('.download').click(function(){
   var checked = listChecked();
 
   //generate comma-separated list of fields
-  data.fields = '';
+  data.agencies = '';
   for(var i=0;i<checked.length;i++) {
-    data.fields+= checked[i] + ',';
+    if(i>0) {
+      data.agencies += 'OR ';
+    }
+    data.agencies += 'agency_name = \'' + checked[i] + '\'';
   }
 
   //only add leading comma if at least one field is selected
-  if(data.fields.length>0) {
-    data.fields=',' + data.fields.slice(0,-1);
-  }
+  // if(data.fields.length>0) {
+  //   data.fields=',' + data.fields.slice(0,-1);
+  // }
   
 
   if(areaType == 'currentView') {
@@ -199,7 +205,7 @@ $('.download').click(function(){
     data.cartodb = true;
   }
 
-  var queryTemplate = 'https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=pluto&q=SELECT the_geom{{fields}} FROM pluto15v1 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom)';
+  var queryTemplate = 'https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q=SELECT * FROM table_2088960273 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom)';
 
 
   var buildquery = Handlebars.compile(queryTemplate);
@@ -238,6 +244,7 @@ $('.download').click(function(){
 //when a polygon is clicked in Neighborhood View, download its geojson, etc
 function processNeighborhood(e, latlng, pos, data, layer) {
 
+  console.log('click');
   var nid = data.cartodb_id;
   selectLayer.clearLayers();
 
