@@ -1,6 +1,7 @@
 var areaType='currentView';
 var drawnLayer;
-var mainLayer,ntaLayer;
+var mainLayer,ntaLayer,cdLayer;
+var geomTable;
 var nPolygon;
 
 //initialize map
@@ -77,12 +78,29 @@ var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/a1bdc326-73bb-11e5-927a-0e
 cartodb.createLayer(map, layerUrl)
   .addTo(map)
   .on('done', function(layer) {
+
+    console.log(layer);
+
     mainLayer = layer.getSubLayer(0);
     mainLayer.setInteraction(false);
 
     ntaLayer = layer.getSubLayer(1); 
     ntaLayer.hide();  //hide neighborhood polygons
-    ntaLayer.on('featureClick', processNeighborhood);
+    ntaLayer.on('featureClick', function(e, latlng, pos, data, layer) {
+      var cartodb_id = data.cartodb_id;
+      processGeom('nynta',cartodb_id)
+    });
+
+
+
+    cdLayer = layer.getSubLayer(2); 
+    cdLayer.hide();  //hide neighborhood polygons
+    cdLayer.on('featureClick', function(e, latlng, pos, data, layer) {
+      var cartodb_id = data.cartodb_id;
+      processGeom('nycd',cartodb_id)
+    });
+
+    
   });
 
 //populate fields list
@@ -133,8 +151,10 @@ $('#selectAll').click(function(){
 
 //radio buttons
 $('input[type=radio][name=area]').change(function() {
+  console.log(cdLayer);
   //reset all the things
   ntaLayer.hide();
+  cdLayer.hide();
   selectLayer.clearLayers();
   $('.leaflet-draw-toolbar').hide();
   if (drawnLayer) {
@@ -153,6 +173,11 @@ $('input[type=radio][name=area]').change(function() {
   if(this.value == 'neighborhood') {
     areaType='neighborhood';
     ntaLayer.show();
+    $('.download').attr('disabled','disabled');
+  }
+  if(this.value == 'communityDistrict') {
+    areaType='communityDistrict';
+    cdLayer.show();
     $('.download').attr('disabled','disabled');
   }
 })
@@ -199,6 +224,10 @@ $('.download').click(function(){
   if(areaType == 'neighborhood') {
     data.intersects = nPolygon;
   }
+
+  if(areaType == 'communityDistrict') {
+    data.intersects = nPolygon;
+  }
   
   if(data.type == 'cartodb') {
     data.type = 'geojson';
@@ -242,17 +271,19 @@ $('.download').click(function(){
 //functions
 
 //when a polygon is clicked in Neighborhood View, download its geojson, etc
-function processNeighborhood(e, latlng, pos, data, layer) {
+function processGeom(tableName,cartodb_id) {
+  console.log();
 
-  console.log('click');
-  var nid = data.cartodb_id;
   selectLayer.clearLayers();
 
+  var options = { 
+    id: cartodb_id,
+    tableName: tableName 
+  }
+
   var sql = new cartodb.SQL({ user: 'cwhong' });
-  sql.execute("SELECT the_geom FROM nynta WHERE cartodb_id = {{id}}", 
-    { 
-      id: data.cartodb_id 
-    },
+  sql.execute("SELECT the_geom FROM {{tableName}} WHERE cartodb_id = {{id}}", 
+    options,
     {
       format:'geoJSON'
     }
@@ -261,7 +292,7 @@ function processNeighborhood(e, latlng, pos, data, layer) {
     console.log(data);
     selectLayer.addData(data);
     //setup SQL statement for intersection
-    nPolygon = '(SELECT the_geom FROM nynta WHERE cartodb_id = ' + nid + ')';
+    nPolygon = Mustache.render("(SELECT the_geom FROM {{tableName}} WHERE cartodb_id = '{{id}}')",options);
   })
 }
 
@@ -394,6 +425,8 @@ $( document ).ready(function() {
         shadowTop, shadowBottom,
         timeout;
     
+
+
     function initShadows() {
       shadowTop = $("<div>")
         .addClass("shadow-top")
