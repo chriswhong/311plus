@@ -103,51 +103,51 @@ cartodb.createLayer(map, layerUrl)
     
   });
 
-//populate fields list
-var url = 'http://cwhong.cartodb.com/api/v2/sql?q=SELECT DISTINCT(agency_name) FROM table_2088960273 ORDER BY agency_name ASC'
+// //populate fields list
+// var url = 'http://cwhong.cartodb.com/api/v2/sql?q=SELECT DISTINCT(agency_name) FROM table_2088960273 ORDER BY agency_name ASC'
 
-$.getJSON(url,function(data){
-  data.rows.forEach(function(field) {
-    var listItem = '<li id = "' + field.agency_name + '" class="list-group-item">' 
-      + field.agency_name + '</li>'
+// $.getJSON(url,function(data){
+//   data.rows.forEach(function(field) {
+//     var listItem = '<li id = "' + field.agency_name + '" class="list-group-item">' 
+//       + field.agency_name + '</li>'
     
-    $('.fieldList').append(listItem);
-    //$('#' + field.name).data("description",field.description);
+//     $('.fieldList').append(listItem);
+//     //$('#' + field.name).data("description",field.description);
     
-  });
+//   });
 
-  //listener for hovers
-  //$('.icon-right').hover(showDescription,hideDescription);
+//   //listener for hovers
+//   //$('.icon-right').hover(showDescription,hideDescription);
 
-  function showDescription() {
-    var o = $(this).offset();
+//   function showDescription() {
+//     var o = $(this).offset();
 
-    var data = $(this).parent().data('description');
+//     var data = $(this).parent().data('description');
 
-    $('#infoWindow')
-      .html(data)
-      .css('top',o.top-10)
-      .css('left',o.left+30)
-      .fadeIn(150);
-  }
+//     $('#infoWindow')
+//       .html(data)
+//       .css('top',o.top-10)
+//       .css('left',o.left+30)
+//       .fadeIn(150);
+//   }
 
-  function hideDescription() {
-    $('#infoWindow')
-      .fadeOut(150);
-  }
+//   function hideDescription() {
+//     $('#infoWindow')
+//       .fadeOut(150);
+//   }
 
 
-  //custom functionality for checkboxes
-  initCheckboxes();
-});
+//   //custom functionality for checkboxes
+//   initCheckboxes();
+// });
 
-//$('#splashModal').modal('show');
+// //$('#splashModal').modal('show');
 
-//listeners
-$('#selectAll').click(function(){
-  $(".fieldList li").click(); 
-  listChecked();
-}); 
+// //listeners
+// $('#selectAll').click(function(){
+//   $(".fieldList li").click(); 
+//   listChecked();
+// }); 
 
 //radio buttons
 $('input[type=radio][name=area]').change(function() {
@@ -234,7 +234,7 @@ $('.download').click(function(){
     data.cartodb = true;
   }
 
-  var queryTemplate = 'https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q=SELECT * FROM table_2088960273 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom)';
+  var queryTemplate = 'https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q=SELECT * FROM table_2752994510 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom)';
 
 
   var buildquery = Handlebars.compile(queryTemplate);
