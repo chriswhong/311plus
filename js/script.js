@@ -166,16 +166,16 @@ $('.download').click(function(){
   var bbox = map.getBounds();
   data.intersects = customPolygon;
   data.type = $(this).attr('id');
-  var checked = listChecked();
+  //var checked = listChecked();
 
-  //generate comma-separated list of fields
-  data.agencies = '';
-  for(var i=0;i<checked.length;i++) {
-    if(i>0) {
-      data.agencies += 'OR ';
-    }
-    data.agencies += 'agency_name = \'' + checked[i] + '\'';
-  }
+  // //generate comma-separated list of fields
+  // data.agencies = '';
+  // for(var i=0;i<checked.length;i++) {
+  //   if(i>0) {
+  //     data.agencies += 'OR ';
+  //   }
+  //   data.agencies += 'agency_name = \'' + checked[i] + '\'';
+  // }
 
   //only add leading comma if at least one field is selected
   // if(data.fields.length>0) {
