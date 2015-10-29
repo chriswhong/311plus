@@ -1,0 +1,17 @@
+--Create materialized view from monthly imports
+CREATE MATERIALIZED VIEW union_311 AS (
+
+  SELECT * FROM table_311sync_1
+  
+  UNION
+  
+  SELECT * FROM table_311sync_2
+  
+  UNION
+  
+  SELECT * FROM table_311sync_3
+
+)
+
+--Make it a public table
+GRANT SELECT ON union_311 TO publicuser

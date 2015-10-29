@@ -75,6 +75,7 @@ map.on('draw:drawstart', function (e) {
 //add cartodb named map
 var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/a1bdc326-73bb-11e5-927a-0ea31932ec1d/viz.json';
 
+
 cartodb.createLayer(map, layerUrl)
   .addTo(map)
   .on('done', function(layer) {
@@ -85,6 +86,7 @@ cartodb.createLayer(map, layerUrl)
     mainLayer.setInteraction(false);
 
     ntaLayer = layer.getSubLayer(1); 
+    ntaLayer.setInteraction(true);
     ntaLayer.hide();  //hide neighborhood polygons
     ntaLayer.on('featureClick', function(e, latlng, pos, data, layer) {
       var cartodb_id = data.cartodb_id;
@@ -94,6 +96,7 @@ cartodb.createLayer(map, layerUrl)
 
 
     cdLayer = layer.getSubLayer(2); 
+    cdLayer.setInteraction(true);
     cdLayer.hide();  //hide neighborhood polygons
     cdLayer.on('featureClick', function(e, latlng, pos, data, layer) {
       var cartodb_id = data.cartodb_id;
@@ -103,51 +106,23 @@ cartodb.createLayer(map, layerUrl)
     
   });
 
-// //populate fields list
-// var url = 'http://cwhong.cartodb.com/api/v2/sql?q=SELECT DISTINCT(agency_name) FROM table_2088960273 ORDER BY agency_name ASC'
+var sql = new cartodb.SQL({ user: 'cwhong' });
+//get max, min, count
+sql.execute("SELECT min(created_date),max(created_date),count(*) FROM union_311")
+  .done(function(data) {
+    var d = data.rows[0];
+    console.log(d);
+    var options = {
+      count: d.count.toLocaleString(),
+      start: moment(d.min).format('MM/DD/YYYY'),
+      end: moment(d.max).format('MM/DD/YYYY')
+    }
 
-// $.getJSON(url,function(data){
-//   data.rows.forEach(function(field) {
-//     var listItem = '<li id = "' + field.agency_name + '" class="list-group-item">' 
-//       + field.agency_name + '</li>'
+    var info = Mustache.render("Current Dataset contains {{count}} rows from {{{start}}} to {{{end}}}",options);
     
-//     $('.fieldList').append(listItem);
-//     //$('#' + field.name).data("description",field.description);
-    
-//   });
+    $('.info').text(info);
+  });
 
-//   //listener for hovers
-//   //$('.icon-right').hover(showDescription,hideDescription);
-
-//   function showDescription() {
-//     var o = $(this).offset();
-
-//     var data = $(this).parent().data('description');
-
-//     $('#infoWindow')
-//       .html(data)
-//       .css('top',o.top-10)
-//       .css('left',o.left+30)
-//       .fadeIn(150);
-//   }
-
-//   function hideDescription() {
-//     $('#infoWindow')
-//       .fadeOut(150);
-//   }
-
-
-//   //custom functionality for checkboxes
-//   initCheckboxes();
-// });
-
-// //$('#splashModal').modal('show');
-
-// //listeners
-// $('#selectAll').click(function(){
-//   $(".fieldList li").click(); 
-//   listChecked();
-// }); 
 
 //radio buttons
 $('input[type=radio][name=area]').change(function() {
@@ -272,7 +247,7 @@ $('.download').click(function(){
 
 //when a polygon is clicked in Neighborhood View, download its geojson, etc
 function processGeom(tableName,cartodb_id) {
-  console.log();
+  console.log('processGeom');
 
   selectLayer.clearLayers();
 
@@ -281,7 +256,7 @@ function processGeom(tableName,cartodb_id) {
     tableName: tableName 
   }
 
-  var sql = new cartodb.SQL({ user: 'cwhong' });
+  
   sql.execute("SELECT the_geom FROM {{tableName}} WHERE cartodb_id = {{id}}", 
     options,
     {
@@ -318,84 +293,7 @@ function makeSqlPolygon(coords) {
   return s;
 }
 
-function initCheckboxes() {
-  //sweet checkbox list from http://bootsnipp.com/snippets/featured/checked-list-group
-  $('.list-group.checked-list-box .list-group-item').each(function () {
-      
-      // Settings
-      var $widget = $(this),
-          $checkbox = $('<input type="checkbox" class="hidden" />'),
-          color = ($widget.data('color') ? $widget.data('color') : "primary"),
-          style = ($widget.data('style') == "button" ? "btn-" : "list-group-item-"),
-          settings = {
-              on: {
-                  icon: 'glyphicon glyphicon-check'
-              },
-              off: {
-                  icon: 'glyphicon glyphicon-unchecked'
-              }
-          };
-          
-      $widget.css('cursor', 'pointer')
-      $widget.append($checkbox);
 
-      // Event Handlers
-      $widget.on('click', function () {
-          $checkbox.prop('checked', !$checkbox.is(':checked'));
-          $checkbox.triggerHandler('change');
-          updateDisplay();
-      });
-      $checkbox.on('change', function () {
-          updateDisplay();
-      });
-        
-
-      // Actions
-      function updateDisplay() {
-          var isChecked = $checkbox.is(':checked');
-
-          // Set the button's state
-          $widget.data('state', (isChecked) ? "on" : "off");
-
-          // Set the button's icon
-          $widget.find('.state-icon')
-              .removeClass()
-              .addClass('state-icon ' + settings[$widget.data('state')].icon);
-
-          // Update the button's color
-          if (isChecked) {
-              $widget.addClass(style + color + ' active');
-          } else {
-              $widget.removeClass(style + color + ' active');
-          }
-      }
-
-      // Initialization
-      function init() {
-          
-          if ($widget.data('checked') == true) {
-              $checkbox.prop('checked', !$checkbox.is(':checked'));
-          }
-          
-          updateDisplay();
-
-          // Inject the icon if applicable
-          if ($widget.find('.state-icon').length == 0) {
-            $widget.prepend('<span class="state-icon ' + settings[$widget.data('state')].icon + '"></span>');
-          }
-      }
-      init();
-  });
-};
-
-function listChecked() { 
-  var checkedItems = [];
-  $(".fieldList li.active").each(function(idx, li) {
-      checkedItems.push($(li).text());
-  });
-  console.log(checkedItems);
-  return checkedItems;
-}
 
 
 $( document ).ready(function() {
