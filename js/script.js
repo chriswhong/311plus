@@ -1,8 +1,7 @@
-var areaType='currentView';
-var drawnLayer;
-var mainLayer,ntaLayer,cdLayer;
-var geomTable;
-var nPolygon;
+//name map layers
+var pointLayer,ntaLayer,cdLayer,drawnLayer;
+var selection = {};
+selection.areaType='currentView';
 
 //initialize map
 var map = new L.Map('map', { 
@@ -16,75 +15,20 @@ L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
 
 var selectLayer = L.geoJson().addTo(map); //add empty geojson layer for selections
 
-//leaflet draw stuff
-
-var options = {
-    position: 'topright',
-    draw: {
-        polyline:false,
-        polygon: {
-            allowIntersection: false, // Restricts shapes to simple polygons
-            drawError: {
-                color: '#e1e100', // Color the shape will turn when intersects
-                message: '<strong>Oh snap!<strong> you can\'t draw that!' // Message that will show when intersect
-            },
-            shapeOptions: {
-                color: '#bada55'
-            }
-        },
-        circle: false, // Turns off this drawing tool
-        rectangle: {
-            shapeOptions: {
-                clickable: false
-            }
-        },
-        marker:false
-    }
-};
-
-var drawControl = new L.Control.Draw(options);
-map.addControl(drawControl);
-$('.leaflet-draw-toolbar').hide();
-
-var customPolygon;
-map.on('draw:created', function (e) {
-    //hide the arrow
-    $('.infoArrow').hide();
-
-    var type = e.layerType,
-        layer = e.layer;
-
-    console.log(e.layer);
-    drawnLayer=e.layer;
-
-    var coords = e.layer._latlngs;
-    console.log(coords);
-    customPolygon = makeSqlPolygon(coords);
-    // Do whatever else you need to. (save to db, add to map etc)
-    map.addLayer(layer);
-    $('.download').removeAttr('disabled');
-});
-
-map.on('draw:drawstart', function (e) {
-  console.log('start');
-  if (drawnLayer) {
-    map.removeLayer(drawnLayer);
-  }
-});
+initLeafletDraw();
 
 //add cartodb named map
 var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/a1bdc326-73bb-11e5-927a-0ea31932ec1d/viz.json';
-
 
 cartodb.createLayer(map, layerUrl)
   .addTo(map)
   .on('done', function(layer) {
 
-    console.log(layer);
+    //points
+    pointLayer = layer.getSubLayer(0);
+    pointLayer.setInteraction(false);
 
-    mainLayer = layer.getSubLayer(0);
-    mainLayer.setInteraction(false);
-
+    //neighborhood tabulation areas
     ntaLayer = layer.getSubLayer(1); 
     ntaLayer.setInteraction(true);
     ntaLayer.hide();  //hide neighborhood polygons
@@ -93,25 +37,23 @@ cartodb.createLayer(map, layerUrl)
       processGeom('nynta',cartodb_id)
     });
 
-
-
+    //community districts
     cdLayer = layer.getSubLayer(2); 
     cdLayer.setInteraction(true);
     cdLayer.hide();  //hide neighborhood polygons
     cdLayer.on('featureClick', function(e, latlng, pos, data, layer) {
       var cartodb_id = data.cartodb_id;
       processGeom('nycd',cartodb_id)
-    });
-
-    
+    });  
   });
 
 var sql = new cartodb.SQL({ user: 'cwhong' });
-//get max, min, count
+
+//get max, min, count, populate date range slider
 sql.execute("SELECT min(created_date),max(created_date),count(*) FROM union_311")
   .done(function(data) {
     var d = data.rows[0];
-    console.log(d);
+
     var options = {
       count: d.count.toLocaleString(),
       start: moment(d.min).format('MM/DD/YYYY'),
@@ -121,8 +63,32 @@ sql.execute("SELECT min(created_date),max(created_date),count(*) FROM union_311"
     var info = Mustache.render("Current Dataset contains {{count}} rows from {{{start}}} to {{{end}}}",options);
     
     $('.info').text(info);
+
+    //set initial values for selected date (will be updated when user changes slider)
+    selection.dateRange = {
+      min: new Date(moment(d.max).subtract(90,'days')),
+      max: new Date(d.max)
+    }
+    //Set initial slider range
+    $("#slider").dateRangeSlider({
+      bounds:{
+        min: new Date(d.min),
+        max: new Date(d.max)
+      },
+      defaultValues:{
+        min: selection.dateRange.min,
+        max: selection.dateRange.max
+      }
+    });   
   });
 
+//update selection dateRange when user changes slider
+$("#slider").bind("valuesChanged", function(e, data){  
+  selection.dateRange = {
+    min: data.values.min,
+    max: data.values.max
+  };
+});
 
 //radio buttons
 $('input[type=radio][name=area]').change(function() {
@@ -136,22 +102,22 @@ $('input[type=radio][name=area]').change(function() {
     map.removeLayer(drawnLayer);
   }
 
-  //turn on certain things
+  //turn on certain things 
   if(this.value == 'polygon') {
-    areaType='polygon';
+    selection.areaType='polygon';
     $('.leaflet-draw-toolbar').show();
     $('.download').attr('disabled','disabled');
   }
   if(this.value == 'currentView') {
-    areaType='currentView';
+    selection.areaType='currentView';
   }
   if(this.value == 'neighborhood') {
-    areaType='neighborhood';
+    selection.areaType='neighborhood';
     ntaLayer.show();
     $('.download').attr('disabled','disabled');
   }
   if(this.value == 'communityDistrict') {
-    areaType='communityDistrict';
+    selection.areaType='communityDistrict';
     cdLayer.show();
     $('.download').attr('disabled','disabled');
   }
@@ -159,67 +125,62 @@ $('input[type=radio][name=area]').change(function() {
 
 //runs when any of the download buttons is clicked
 $('.download').click(function(){
+  selection.downloadType = $(this).attr('id');
+  startDownload();
+});
 
-  var data = {};
+//functions
+function startDownload() {
+  selection.dateRangeFormatted = {
+    min:moment(selection.dateRange.min).format('YYYY-MM-DD'),
+    max:moment(selection.dateRange.max).format('YYYY-MM-DD')
+  }
 
   //get current view, download type, and checked fields
-  var bbox = map.getBounds();
-  data.intersects = customPolygon;
-  data.type = $(this).attr('id');
-  //var checked = listChecked();
+  selection.bbox = map.getBounds();
+ 
 
-  // //generate comma-separated list of fields
-  // data.agencies = '';
-  // for(var i=0;i<checked.length;i++) {
-  //   if(i>0) {
-  //     data.agencies += 'OR ';
-  //   }
-  //   data.agencies += 'agency_name = \'' + checked[i] + '\'';
+
+  if(selection.areaType == 'currentView') {
+    var bboxString = selection.bbox._southWest.lng + ',' 
+    + selection.bbox._southWest.lat + ','
+    + selection.bbox._northEast.lng + ','
+    + selection.bbox._northEast.lat;
+
+    selection.intersects = 'ST_MakeEnvelope(' + bboxString + ',4326)';
+  }
+
+  // if(selection.areaType == 'polygon') {
+  //   selection.intersects = customPolygon;
   // }
 
-  //only add leading comma if at least one field is selected
-  // if(data.fields.length>0) {
-  //   data.fields=',' + data.fields.slice(0,-1);
-  // }
-  
-
-  if(areaType == 'currentView') {
-    var bboxString = bbox._southWest.lng + ',' 
-    + bbox._southWest.lat + ','
-    + bbox._northEast.lng + ','
-    + bbox._northEast.lat;
-
-    data.intersects = 'ST_MakeEnvelope(' + bboxString + ',4326)';
+  if(selection.areaType == 'neighborhood') {
+    selection.intersects = nPolygon;
   }
 
-  if(areaType == 'polygon') {
-    data.intersects = customPolygon;
-  }
-
-  if(areaType == 'neighborhood') {
-    data.intersects = nPolygon;
-  }
-
-  if(areaType == 'communityDistrict') {
-    data.intersects = nPolygon;
+  if(selection.areaType == 'communityDistrict') {
+    selection.intersects = nPolygon;
   }
   
-  if(data.type == 'cartodb') {
-    data.type = 'geojson';
-    data.cartodb = true;
+  if(selection.downloadType == 'cartodb') {
+    selection.downloadType = 'geojson';
+    selection.cartodb = true;
   }
 
-  var queryTemplate = 'https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q=SELECT * FROM table_2752994510 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom)';
+  var sql = Mustache.render('SELECT * FROM union_311 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom) AND created_date >= \'{{dateRange.min}}\' AND created_date <= \'{{dateRange.max}}\'',{
+    intersects: selection.intersects,
+    dateRange: selection.dateRangeFormatted
+  });
 
-
-  var buildquery = Handlebars.compile(queryTemplate);
-
-  var url = buildquery(data);
+  var url = Mustache.render('https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q={{{sql}}}',{
+    type: selection.downloadType,
+    sql: sql
+  });
 
   console.log("Downloading " + url);
 
   //http://oneclick.cartodb.com/?file={{YOUR FILE URL}}&provider={{PROVIDER NAME}}&logo={{YOUR LOGO URL}}
-  if(data.cartodb) {
+  if(selection.cartodb) {
     //open in cartodb only works if you encodeURIcomponent() on the SQL, 
     //then concatenate with the rest of the URL, then encodeURIcomponent() the whole thing
 
@@ -239,11 +200,8 @@ $('.download').click(function(){
   window.open(url, 'My Download');
   
 
-   
+}
 
-});
-
-//functions
 
 //when a polygon is clicked in Neighborhood View, download its geojson, etc
 function processGeom(tableName,cartodb_id) {
@@ -294,7 +252,67 @@ function makeSqlPolygon(coords) {
 }
 
 
+function initLeafletDraw() {
+  //leaflet draw stuff
 
+
+var options = {
+    position: 'topright',
+    draw: {
+        polyline:false,
+        polygon: {
+            allowIntersection: false, // Restricts shapes to simple polygons
+            drawError: {
+                color: '#e1e100', // Color the shape will turn when intersects
+                message: '<strong>Oh snap!<strong> you can\'t draw that!' // Message that will show when intersect
+            },
+            shapeOptions: {
+                color: '#bada55'
+            }
+        },
+        circle: false, // Turns off this drawing tool
+        rectangle: {
+            shapeOptions: {
+                clickable: false
+            }
+        },
+        marker:false
+    }
+};
+
+
+
+var drawControl = new L.Control.Draw(options);
+  map.addControl(drawControl);
+  $('.leaflet-draw-toolbar').hide();
+
+ 
+  map.on('draw:created', function (e) {
+      //hide the arrow
+      $('.infoArrow').hide();
+
+      var type = e.layerType,
+          layer = e.layer;
+
+      console.log(e.layer);
+      drawnLayer=e.layer;
+
+      var coords = e.layer._latlngs;
+      console.log(coords);
+      selection.intersects = makeSqlPolygon(coords);
+      // Do whatever else you need to. (save to db, add to map etc)
+      map.addLayer(layer);
+      $('.download').removeAttr('disabled');
+  });
+
+  map.on('draw:drawstart', function (e) {
+    console.log('start');
+    if (drawnLayer) {
+      map.removeLayer(drawnLayer);
+    }
+  });
+
+}
 
 $( document ).ready(function() {
     $('.js-about').click(function() {
@@ -379,7 +397,7 @@ $( document ).ready(function() {
     return {
       init: function(par) {
         elem = $(par);
-        initShadows();
+        //initShadows();
         calcPosition();
         addScrollListener();
         addResizeListener();

@@ -18,7 +18,10 @@
     <link rel="stylesheet" href="css/leaflet.draw.css">
     <link rel="stylesheet" href="css/styleguide.min.css">
     <link rel="stylesheet" type="text/css" href="css/icons.css">
+    <link rel="stylesheet" href="css/iThing-min.css">
     <link rel="stylesheet" href="css/style.css">
+
+
 
     <link rel="icon" type="image/png" href="./favicon.png">
   </head>
@@ -92,25 +95,24 @@
                 </li>
               </ul>
             </li>
-            <!-- <li class="u-vspace-xxl">
+            <li class="u-vspace-xxl">
               <div class="u-vspace-l clearfix">
                 <div class="u-left">
-                  <span class="Number-circle u-txt-center fill fill-dark color-white u-iblock u-malign">2</span> <h2 class="u-iblock u-malign"><strong>Choose Agencies</strong></h2>
+                  <span class="Number-circle u-txt-center fill fill-dark color-white u-iblock u-malign">2</span> <h2 class="u-iblock u-malign"><strong>Choose Date Range</strong></h2>
                 </div>
-                <p class="u-right"><a href="#" id="selectAll">Select All</a></p>
+                
               </div>
               <div class="u-vspace-xxl">
-                <div class="well u-pr" style="height: 215px;">
-                  <div class="well-inner" style="height: 215px; overflow: auto;">
-                    <ul class="list-group checked-list-box fieldList u-pr">
-                    </ul>
+                <div class="well u-pr" >
+                  <div class="well-inner" >
+                    <div id="slider"></div>
                   </div>
                 </div>
               </div>
-            </li> -->
+            </li>
             <li>
               <div class="u-vspace-l">
-                <span class="Number-circle u-txt-center fill fill-dark color-white u-iblock u-malign">2</span> <h2 class="u-iblock u-malign"><strong>Download!</strong></h2>
+                <span class="Number-circle u-txt-center fill fill-dark color-white u-iblock u-malign">3</span> <h2 class="u-iblock u-malign"><strong>Download! </strong> </h2>
               </div>
               <ul class="u-ilist u-vspace-xxl">
                 <li>
@@ -163,10 +165,12 @@
     <div id="infoWindow">ZONING, ALL COMPONENTS 1 consists of the zoning classification occupying the greatest percentage of the tax lot's area and a commercial overlay and special purpose district and limited height district assigned to the tax lot</div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <script src="js/jQDateRangeSlider-min.js"></script>
     <script src="https://cartodb-libs.global.ssl.fastly.net/cartodb.js/v3/3.13/cartodb.js"></script>
     <script src="js/leaflet.draw.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.2.0/mustache.min.js"></script>
  
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/3.0.3/handlebars.min.js"></script>
     <script src="js/moment.js"></script>
     <script src="js/script.js"></script>
 
