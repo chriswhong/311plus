@@ -204,3 +204,7 @@ path {
 .ui-rangeSlider-label-value {
   font-family: lato, sans-serif;
 }
+
+#count {
+  font: 300 15px/22px Lato;
+}

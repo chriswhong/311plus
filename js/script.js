@@ -28,6 +28,7 @@ cartodb.createLayer(map, layerUrl)
     pointLayer = layer.getSubLayer(0);
     pointLayer.setInteraction(false);
 
+
     //neighborhood tabulation areas
     ntaLayer = layer.getSubLayer(1); 
     ntaLayer.setInteraction(true);
@@ -35,6 +36,7 @@ cartodb.createLayer(map, layerUrl)
     ntaLayer.on('featureClick', function(e, latlng, pos, data, layer) {
       var cartodb_id = data.cartodb_id;
       processGeom('nynta',cartodb_id)
+      updateCount();
     });
 
     //community districts
@@ -44,6 +46,7 @@ cartodb.createLayer(map, layerUrl)
     cdLayer.on('featureClick', function(e, latlng, pos, data, layer) {
       var cartodb_id = data.cartodb_id;
       processGeom('nycd',cartodb_id)
+      updateCount();
     });  
   });
 
@@ -69,6 +72,13 @@ sql.execute("SELECT min(created_date),max(created_date),count(*) FROM union_311"
       min: new Date(moment(d.max).subtract(90,'days')),
       max: new Date(d.max)
     }
+
+    selection.dateRangeFormatted = {
+      min:moment(selection.dateRange.min).format('YYYY-MM-DD'),
+      max:moment(selection.dateRange.max).format('YYYY-MM-DD')
+    }
+      
+
     //Set initial slider range
     $("#slider").dateRangeSlider({
       bounds:{
@@ -88,7 +98,24 @@ $("#slider").bind("valuesChanged", function(e, data){
     min: data.values.min,
     max: data.values.max
   };
+
+  selection.dateRangeFormatted = {
+    min:moment(selection.dateRange.min).format('YYYY-MM-DD'),
+    max:moment(selection.dateRange.max).format('YYYY-MM-DD')
+  }
+
+  updateCount();
+  updateMap();
 });
+
+map.on('dragend', checkType);
+map.on('zoomend', checkType);
+
+function checkType() {
+  if(selection.areaType=='currentView') {
+    updateCount();
+  }
+}
 
 //radio buttons
 $('input[type=radio][name=area]').change(function() {
@@ -104,19 +131,23 @@ $('input[type=radio][name=area]').change(function() {
 
   //turn on certain things 
   if(this.value == 'polygon') {
+    hideCount();
     selection.areaType='polygon';
     $('.leaflet-draw-toolbar').show();
     $('.download').attr('disabled','disabled');
   }
   if(this.value == 'currentView') {
     selection.areaType='currentView';
+    updateCount();
   }
   if(this.value == 'neighborhood') {
+    hideCount();
     selection.areaType='neighborhood';
     ntaLayer.show();
     $('.download').attr('disabled','disabled');
   }
   if(this.value == 'communityDistrict') {
+    hideCount();
     selection.areaType='communityDistrict';
     cdLayer.show();
     $('.download').attr('disabled','disabled');
@@ -126,15 +157,13 @@ $('input[type=radio][name=area]').change(function() {
 //runs when any of the download buttons is clicked
 $('.download').click(function(){
   selection.downloadType = $(this).attr('id');
-  startDownload();
+  var query = buildQuery();
+  var url = buildUrl(query);
+  window.open(url, 'My Download');
 });
 
 //functions
-function startDownload() {
-  selection.dateRangeFormatted = {
-    min:moment(selection.dateRange.min).format('YYYY-MM-DD'),
-    max:moment(selection.dateRange.max).format('YYYY-MM-DD')
-  }
+function buildQuery(count) {
 
   //get current view, download type, and checked fields
   selection.bbox = map.getBounds();
@@ -167,11 +196,27 @@ function startDownload() {
     selection.cartodb = true;
   }
 
-  var sql = Mustache.render('SELECT * FROM union_311 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom) AND created_date >= \'{{dateRange.min}}\' AND created_date <= \'{{dateRange.max}}\'',{
-    intersects: selection.intersects,
-    dateRange: selection.dateRangeFormatted
-  });
+  (count) ? selection.select = 'count(*)' : selection.select = '*';
 
+  var sql = Mustache.render('SELECT {{select}} FROM union_311 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom) AND created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
+
+  return sql;
+}
+
+function hideCount() {
+  $('#count').fadeOut();
+}
+
+function updateMap() {
+  console.log('updatemap');
+  var mapQuery = Mustache.render('SELECT *,mod(cartodb_id,4) as cat FROM union_311 WHERE created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
+  console.log(mapQuery);
+
+  pointLayer.setSQL(mapQuery);
+
+}
+
+function buildUrl(sql) {
   var url = Mustache.render('https://cwhong.cartodb.com/api/v2/sql?skipfields=cartodb_id,created_at,updated_at,name,description&format={{type}}&filename=311&q={{{sql}}}',{
     type: selection.downloadType,
     sql: sql
@@ -197,11 +242,18 @@ function startDownload() {
     url = 'http://oneclick.cartodb.com/?file=' + url;
   } 
     
-  window.open(url, 'My Download');
-  
-
+  return url;
 }
 
+function updateCount() {
+  var query = buildQuery(true);
+  sql.execute(query)
+    .done(function(data) {
+      var count = data.rows[0].count.toLocaleString();
+      $('#count').text('The current selection contains ' + count + ' rows.').fadeIn();
+      
+    });
+}
 
 //when a polygon is clicked in Neighborhood View, download its geojson, etc
 function processGeom(tableName,cartodb_id) {
@@ -303,6 +355,7 @@ var drawControl = new L.Control.Draw(options);
       // Do whatever else you need to. (save to db, add to map etc)
       map.addLayer(layer);
       $('.download').removeAttr('disabled');
+      updateCount();
   });
 
   map.on('draw:drawstart', function (e) {
