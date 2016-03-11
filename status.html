@@ -50,7 +50,7 @@
     })
 
 
-    var apiCall = 'https://cwhong.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20union_311%20ORDER%20BY%20created_date%20DESC%20LIMIT%201';
+    var apiCall = 'https://cwhong.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20three_one_one%20ORDER%20BY%20created_date%20DESC%20LIMIT%201';
     $.getJSON(apiCall, function(data) {
       console.log(data.rows[0].created_date);
       var date = data.rows[0].created_date;
