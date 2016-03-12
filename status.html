@@ -17,7 +17,7 @@
 
       <div class="page-header">
         <h1>ETL Status</h1>
-        <p class="lead">Here's some info about the current ETL status.  Each night at midnight, a script runs to grab the latest 3 million records from opendatacache.  Most of the time it works.  Sometimes, it doesn't.</p>
+        <p class="lead">Each night a CartoDB Sync Table imports new data from 311 for the last 90 days.</p>
       </div>
 
       <div class="row">
@@ -41,7 +41,7 @@
     <script>
 
 
-    var apiCall = 'https://data.cityofnewyork.us/resource/erm2-nwe9.json?$LIMIT=1&$ORDER=created_date%20DESC';
+    var apiCall = 'https://data.cityofnewyork.us/resource/fhrw-4uyv.json?$LIMIT=1&$ORDER=created_date%20DESC';
     $.getJSON(apiCall, function(data) {
       console.log(data[0].created_date);
       var date = data[0].created_date;
@@ -50,7 +50,7 @@
     })
 
 
-    var apiCall = 'https://cwhong.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20three_one_one%20ORDER%20BY%20created_date%20DESC%20LIMIT%201';
+    var apiCall = 'https://cwhong.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20update%20ORDER%20BY%20created_date%20DESC%20LIMIT%201';
     $.getJSON(apiCall, function(data) {
       console.log(data.rows[0].created_date);
       var date = data.rows[0].created_date;
