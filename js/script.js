@@ -53,7 +53,7 @@ cartodb.createLayer(map, layerUrl)
 var sql = new cartodb.SQL({ user: 'cwhong' });
 
 //get max, min, count, populate date range slider
-sql.execute("SELECT min(created_date),max(created_date),count(*) FROM update")
+sql.execute("SELECT min(created_date),max(created_date),count(*) FROM data_1")
   .done(function(data) {
     var d = data.rows[0];
 
@@ -198,7 +198,7 @@ function buildQuery(count) {
 
   (count) ? selection.select = 'count(*)' : selection.select = '*';
 
-  var sql = Mustache.render('SELECT {{select}} FROM update a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom) AND created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
+  var sql = Mustache.render('SELECT {{select}} FROM data_1 a WHERE ST_INTERSECTS({{{intersects}}}, a.the_geom) AND created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
 
   return sql;
 }
@@ -209,7 +209,7 @@ function hideCount() {
 
 function updateMap() {
   console.log('updatemap');
-  var mapQuery = Mustache.render('SELECT *,mod(cartodb_id,4) as cat FROM update WHERE created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
+  var mapQuery = Mustache.render('SELECT *,mod(cartodb_id,4) as cat FROM data_1 WHERE created_date >= \'{{dateRangeFormatted.min}}\' AND created_date <= \'{{dateRangeFormatted.max}}\'',selection);
   console.log(mapQuery);
 
   pointLayer.setSQL(mapQuery);
