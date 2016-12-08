@@ -9,7 +9,7 @@ var map = new L.Map('map', {
   zoom: 14
 });
 
-L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
   attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
 }).addTo(map);
 
@@ -20,7 +20,7 @@ initLeafletDraw();
 //add cartodb named map
 var layerUrl = 'https://cwhong.cartodb.com/api/v2/viz/a1bdc326-73bb-11e5-927a-0ea31932ec1d/viz.json';
 
-cartodb.createLayer(map, layerUrl)
+cartodb.createLayer(map, layerUrl, { https: true })
   .addTo(map)
   .on('done', function(layer) {
 
