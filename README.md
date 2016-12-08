@@ -1,7 +1,6 @@
 # 311plus
 A custom download tool for NYC 311 data, built with CartoDB.  View it live at [http://chriswhong.github.io/311plus](http://chriswhong.github.io/311plus)
 
-
 About
 =====
 
